@@ -7,7 +7,7 @@
 class SequentialMotionDetector {
 public:
     void run(std::string videoPath);
-    void benchmarkRun(std::string videoPath);
+    void benchmarkRun(std::string videoPath, int tries);
 
 private:
     float threshold = 0.1;

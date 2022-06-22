@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
     }
 
 	SequentialMotionDetector detector;
-	detector.run(argv[1]);
+	detector.benchmarkRun(argv[1], 10);
 
     return 0;
 }

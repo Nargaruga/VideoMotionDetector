@@ -1,10 +1,14 @@
 #include "sequential_motion_detector.h"
+#include <bits/chrono.h>
+#include <chrono>
+#include <fstream>
 
 void SequentialMotionDetector::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
     cv::Mat background;
 
-	int movementFrames = 0, totalFrames = 0;
+    int movementFrames = 0;
+    int totalFrames = 0;
 
     while(true) {
         cv::Mat frame;
@@ -14,48 +18,80 @@ void SequentialMotionDetector::run(std::string videoPath) {
 
         toGrayScale(frame);
         smooth(frame);
-		if(background.empty()) {
-			background = frame; 
-		} else if(checkFrame(background, frame)) {
-			movementFrames++;
-		}
 
+        if(background.empty()) {
+            background = frame;
+        } else if(checkFrame(background, frame)) {
+            movementFrames++;
+        }
 
-		totalFrames++;
+        totalFrames++;
     }
 
     cap.release();
 
-	std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
+    std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
 }
 
-void SequentialMotionDetector::benchmarkRun(std::string videoPath) {
-    cv::VideoCapture cap(videoPath);
-    cv::Mat background;
-	
-	int movementFrames = 0, totalFrames = 0;
+void SequentialMotionDetector::benchmarkRun(std::string videoPath, int tries) {
+	std::ofstream out;
+	out.open("benchmark.csv");
 
-    while(true) {
-        cv::Mat frame;
-        cap >> frame;
-        if(frame.empty())
-            break;
+	out << "Gray;Smooth;Check;Total\n";
 
-        toGrayScale(frame);
-        smooth(frame);
-		if(background.empty()) {
-			background = frame; 
-		} else if(checkFrame(background, frame)) {
-			movementFrames++;
-		}
+    for(int i = 0; i < tries; i++) {
+        cv::VideoCapture cap(videoPath);
+        cv::Mat background;
 
+        int movementFrames = 0;
+        int totalFrames = 0;
 
-		totalFrames++;
+        int grayElapsed = 0;
+        int smoothElapsed = 0;
+        int checkElapsed = 0;
+
+        while(true) {
+            cv::Mat frame;
+            cap >> frame;
+            if(frame.empty())
+                break;
+
+            auto grayStart =  std::chrono::system_clock::now();
+            toGrayScale(frame);
+            auto grayEnd = std::chrono::system_clock::now();
+            grayElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (grayEnd - grayStart).count();
+
+            auto smoothStart =  std::chrono::system_clock::now();
+            smooth(frame);
+            auto smoothEnd = std::chrono::system_clock::now();
+            smoothElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (smoothEnd - smoothStart).count();
+
+            if(background.empty()) {
+                background = frame;
+            } else {
+                auto checkStart =  std::chrono::system_clock::now();
+                if(checkFrame(background, frame)) {
+                    movementFrames++;
+                }
+                auto checkEnd = std::chrono::system_clock::now();
+                checkElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (checkEnd - checkStart).count();
+            }
+
+            totalFrames++;
+        }
+
+        cap.release();
+
+        std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
+
+	out << grayElapsed << ";"
+		<< smoothElapsed << ";"
+		<< checkElapsed << ";"
+		<< (grayElapsed + smoothElapsed + checkElapsed) << "\n";
     }
 
-    cap.release();
-	
-	std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
+
+	out.close();
 }
 
 void SequentialMotionDetector::toGrayScale(cv::Mat& img) {
@@ -104,25 +140,25 @@ void SequentialMotionDetector::smooth(cv::Mat& img) {
 }
 
 bool SequentialMotionDetector::checkFrame(cv::Mat& background, cv::Mat& frame) {
-	//TODO throw an error
+    //TODO throw an error
     if(background.rows != frame.rows || background.cols != frame.cols)
         return false;
 
-	int count = 0;
-	int pixelThreshold = std::round(threshold * background.rows * background.cols);
+    int count = 0;
+    int pixelThreshold = std::round(threshold * background.rows * background.cols);
 
     for(int r = 0; r < background.rows; r++) {
         for(int c = 0; c < background.cols; c++) {
-			uchar a = background.at<uchar>(r, c);
-			uchar b = frame.at<uchar>(r, c);
+            uchar a = background.at<uchar>(r, c);
+            uchar b = frame.at<uchar>(r, c);
 
-			if(abs(a - b) >= 5)
-				count++;
-			
-			if(count > pixelThreshold) 
-				return true;
+            if(abs(a - b) >= 5)
+                count++;
+
+            if(count > pixelThreshold)
+                return true;
         }
     }
 
-	return false;
+    return false;
 }
