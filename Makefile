@@ -12,13 +12,13 @@ OBJ = $(SRC:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 all: motionDetector 
 
 motionDetector: $(OBJ)  
-	$(CC) $(CFLAGS) $(OCV) -o $@ $^
+	$(CC) $(CFLAGS) $(OCV) $^ -o $@ 
 
-$(OBJDIR)/main.o: $(SRCDIR)/main.cpp $(SRCDIR)/sequential_motion_detector.h
-	$(CC) -c $(CFLAGS) -o $@ $^
+$(OBJDIR)/main.o: $(SRCDIR)/main.cpp 
+	$(CC) -c $(CFLAGS) $^ -o $@ 
 
-$(OBJDIR)/seq_mo_dec.o: $(SRCDIR)/sequential_motion_detector.* 
-	$(CC) -c $(CFLAGS) -o $@ $^
+$(OBJDIR)/sequential_motion_detector.o: $(SRCDIR)/sequential_motion_detector.cpp
+	$(CC) -c $(CFLAGS) $^ -o $@ 
 
 clean:
 	rm -f $(OBJ) 

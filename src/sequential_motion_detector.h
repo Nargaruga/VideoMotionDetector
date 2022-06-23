@@ -14,7 +14,7 @@ private:
 
     void toGrayScale(cv::Mat& img);
     void smooth(cv::Mat& img);
-    bool checkFrame(cv::Mat& background, cv::Mat& frame);
+    bool compareFrame(const cv::Mat& background, const cv::Mat& frame);
 
 };
 

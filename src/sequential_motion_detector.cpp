@@ -2,16 +2,17 @@
 #include <bits/chrono.h>
 #include <chrono>
 #include <fstream>
+#include <opencv2/core/base.hpp>
 
 void SequentialMotionDetector::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
     cv::Mat background;
+    cv::Mat frame;
 
     int movementFrames = 0;
     int totalFrames = 0;
 
     while(true) {
-        cv::Mat frame;
         cap >> frame;
         if(frame.empty())
             break;
@@ -21,77 +22,82 @@ void SequentialMotionDetector::run(std::string videoPath) {
 
         if(background.empty()) {
             background = frame;
-        } else if(checkFrame(background, frame)) {
+        } else if(compareFrame(background, frame)) {
             movementFrames++;
         }
-
+        imshow("img", frame);
+        cv::waitKey(25);
         totalFrames++;
     }
 
     cap.release();
 
-    std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
+    std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 }
 
 void SequentialMotionDetector::benchmarkRun(std::string videoPath, int tries) {
-	std::ofstream out;
-	out.open("benchmark.csv");
+    std::ofstream out;
+    out.open("benchmark.csv");
 
-	out << "Gray;Smooth;Check;Total\n";
+    out << "Gray;Smooth;Check;Total\n";
 
     for(int i = 0; i < tries; i++) {
         cv::VideoCapture cap(videoPath);
         cv::Mat background;
+        cv::Mat frame;
 
         int movementFrames = 0;
         int totalFrames = 0;
 
         int grayElapsed = 0;
         int smoothElapsed = 0;
-        int checkElapsed = 0;
+        int compareElapsed = 0;
+        int totalElapsed = 0;
 
+        auto start = std::chrono::steady_clock::now();
         while(true) {
-            cv::Mat frame;
             cap >> frame;
             if(frame.empty())
                 break;
 
-            auto grayStart =  std::chrono::system_clock::now();
+            auto grayStart =  std::chrono::steady_clock::now();
             toGrayScale(frame);
-            auto grayEnd = std::chrono::system_clock::now();
-            grayElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (grayEnd - grayStart).count();
+            auto grayEnd = std::chrono::steady_clock::now();
+            grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
-            auto smoothStart =  std::chrono::system_clock::now();
+            auto smoothStart =  std::chrono::steady_clock::now();
             smooth(frame);
-            auto smoothEnd = std::chrono::system_clock::now();
-            smoothElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (smoothEnd - smoothStart).count();
+            auto smoothEnd = std::chrono::steady_clock::now();
+            smoothElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
             if(background.empty()) {
                 background = frame;
             } else {
-                auto checkStart =  std::chrono::system_clock::now();
-                if(checkFrame(background, frame)) {
+                auto compareStart =  std::chrono::steady_clock::now();
+                if(compareFrame(background, frame)) {
                     movementFrames++;
                 }
-                auto checkEnd = std::chrono::system_clock::now();
-                checkElapsed = std::chrono::duration_cast<std::chrono::milliseconds> (checkEnd - checkStart).count();
+                auto compareEnd = std::chrono::steady_clock::now();
+                compareElapsed += std::chrono::duration_cast<std::chrono::microseconds> (compareEnd - compareStart).count();
             }
 
             totalFrames++;
         }
+        auto end = std::chrono::steady_clock::now();
+        totalElapsed = std::chrono::duration_cast<std::chrono::microseconds> (end - start).count();
 
         cap.release();
 
-        std::cout << "Movement was detected in " << movementFrames << "out of " << totalFrames << " frames." << std::endl;
+        std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 
-	out << grayElapsed << ";"
-		<< smoothElapsed << ";"
-		<< checkElapsed << ";"
-		<< (grayElapsed + smoothElapsed + checkElapsed) << "\n";
+        out << round(grayElapsed / totalFrames) << ";"
+            << round(smoothElapsed / totalFrames) << ";"
+            << round(compareElapsed / totalFrames) << ";"
+            << totalElapsed << "\n";
     }
 
 
-	out.close();
+    out.close();
 }
 
 void SequentialMotionDetector::toGrayScale(cv::Mat& img) {
@@ -119,12 +125,17 @@ void SequentialMotionDetector::smooth(cv::Mat& img) {
                            1, 2, 1,
                           };
 
+    int border = 1;
+    cv::Mat padded;
     cv::Mat kernel(3, 3, CV_8UC1, kernelData);
     cv::Mat smoothed(img.rows, img.cols, CV_8UC1);
 
-    for(int r = 1; r < img.rows - 1; r++) {
-        for(int c = 1; c < img.cols - 1; c++) {
-            cv::Mat section = img(cv::Range(r-1, r+2), cv::Range(c-1, c+2));
+    // Pad original image to simplify border handling
+    cv::copyMakeBorder(img, padded, border, border, border, border, cv::BORDER_REPLICATE);
+
+    for(int r = 1; r < padded.rows - 2; r++) {
+        for(int c = 1; c < padded.cols - 2; c++) {
+            cv::Mat section = padded(cv::Range(r-1, r+2), cv::Range(c-1, c+2));
             cv::Mat tmp = section.mul(kernel);
 
             int count = 0;
@@ -136,10 +147,10 @@ void SequentialMotionDetector::smooth(cv::Mat& img) {
         }
     }
 
-    img = smoothed.clone();
+	smoothed.copyTo(img);
 }
 
-bool SequentialMotionDetector::checkFrame(cv::Mat& background, cv::Mat& frame) {
+bool SequentialMotionDetector::compareFrame(const cv::Mat& background, const cv::Mat& frame) {
     //TODO throw an error
     if(background.rows != frame.rows || background.cols != frame.cols)
         return false;
