@@ -1,10 +1,20 @@
-#include "sequential_motion_detector.h"
+#include "threaded_vmd.h"
 #include <bits/chrono.h>
 #include <chrono>
 #include <fstream>
 #include <opencv2/core/base.hpp>
 
-void SequentialMotionDetector::run(std::string videoPath) {
+ThreadedVMD::~ThreadedVMD() {
+	for(BlurWorker& worker : m_workers) {
+		worker.stop();
+	}
+
+	for(BlurWorker& worker : m_workers) {
+		worker.waitForCompletion();
+	}
+}
+
+void ThreadedVMD::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
     cv::Mat background;
     cv::Mat frame;
@@ -35,7 +45,7 @@ void SequentialMotionDetector::run(std::string videoPath) {
     std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 }
 
-void SequentialMotionDetector::benchmarkRun(std::string videoPath, int tries) {
+void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
     std::ofstream out;
     out.open("benchmark.csv");
 
@@ -100,7 +110,7 @@ void SequentialMotionDetector::benchmarkRun(std::string videoPath, int tries) {
     out.close();
 }
 
-void SequentialMotionDetector::toGrayScale(cv::Mat& img) {
+void ThreadedVMD::toGrayScale(cv::Mat& img) {
     cv::Mat grey(img.rows, img.cols, CV_8UC1);
 
     for(int r = 0; r < img.rows; r++) {
@@ -118,7 +128,7 @@ void SequentialMotionDetector::toGrayScale(cv::Mat& img) {
     img = grey.clone();
 }
 
-void SequentialMotionDetector::smooth(cv::Mat& img) {
+void ThreadedVMD::smooth(cv::Mat& img) {
     // Gaussian blur kernel
     uchar kernelData[9] = {1, 2, 1,
                            2, 4, 2,
@@ -133,6 +143,7 @@ void SequentialMotionDetector::smooth(cv::Mat& img) {
     // Pad original image to simplify border handling
     cv::copyMakeBorder(img, padded, border, border, border, border, cv::BORDER_REPLICATE);
 
+	int taskIndex = 0;
     for(int r = 1; r < padded.rows - 2; r++) {
         for(int c = 1; c < padded.cols - 2; c++) {
             cv::Mat section = padded(cv::Range(r-1, r+2), cv::Range(c-1, c+2));
@@ -144,19 +155,25 @@ void SequentialMotionDetector::smooth(cv::Mat& img) {
             });
 
             smoothed.at<uchar>(r, c) = std::floor(count / 16.0);
+
+			taskIndex++;
         }
     }
 
 	smoothed.copyTo(img);
 }
 
-bool SequentialMotionDetector::compareFrame(const cv::Mat& background, const cv::Mat& frame) {
+void ThreadedVMD::smoothTask(const cv::Mat& img, cv::Mat& smoothed) {
+
+}
+
+bool ThreadedVMD::compareFrame(const cv::Mat& background, const cv::Mat& frame) {
     //TODO throw an error
     if(background.rows != frame.rows || background.cols != frame.cols)
         return false;
 
     int count = 0;
-    int pixelThreshold = std::round(threshold * background.rows * background.cols);
+    int pixelThreshold = std::round(m_threshold * background.rows * background.cols);
 
     for(int r = 0; r < background.rows; r++) {
         for(int c = 0; c < background.cols; c++) {

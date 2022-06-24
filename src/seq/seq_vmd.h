@@ -1,10 +1,10 @@
-#ifndef SEQUENTIAL_MOTION_DETECTOR
-#define SEQUENTIAL_MOTION_DETECTOR
+#ifndef SEQ_VMD
+#define SEQ_VMD
 
 #include <opencv2/opencv.hpp>
 #include <string>
 
-class SequentialMotionDetector {
+class SequentialVMD{
 public:
     void run(std::string videoPath);
     void benchmarkRun(std::string videoPath, int tries);

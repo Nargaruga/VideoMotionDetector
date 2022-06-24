@@ -1,5 +1,5 @@
 #include <iostream>
-#include "sequential_motion_detector.h"
+#include "seq/seq_vmd.h"
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
@@ -7,7 +7,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-	SequentialMotionDetector detector;
+	SequentialVMD detector;
 	detector.benchmarkRun(argv[1], 10);
 
     return 0;
