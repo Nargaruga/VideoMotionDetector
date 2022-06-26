@@ -13,7 +13,7 @@ protected:
     float threshold = 0.1;
 
     void toGrayScale(cv::Mat& img);
-    void smooth(cv::Mat& img);
+    void smooth(const cv::Mat& kernel, cv::Mat& img);
     bool compareFrame(const cv::Mat& background, const cv::Mat& frame);
 
 };

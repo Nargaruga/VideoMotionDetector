@@ -12,13 +12,21 @@ void VMD::run(std::string videoPath) {
     int movementFrames = 0;
     int totalFrames = 0;
 
+    // Gaussian blur kernel
+    uchar kernelData[9] = {1, 2, 1,
+                           2, 4, 2,
+                           1, 2, 1,
+                          };
+    cv::Mat kernel(3, 3, CV_8UC1, kernelData);
+
+
     while(true) {
         cap >> frame;
         if(frame.empty())
             break;
 
         toGrayScale(frame);
-        smooth(frame);
+        smooth(kernel, frame);
 
         if(background.empty()) {
             background = frame;
@@ -48,6 +56,13 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
         int movementFrames = 0;
         int totalFrames = 0;
 
+        // Gaussian blur kernel
+        uchar kernelData[9] = {1, 2, 1,
+                               2, 4, 2,
+                               1, 2, 1,
+                              };
+        cv::Mat kernel(3, 3, CV_8UC1, kernelData);
+
         int grayElapsed = 0;
         int smoothElapsed = 0;
         int compareElapsed = 0;
@@ -65,7 +80,7 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
             grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
             auto smoothStart =  std::chrono::steady_clock::now();
-            smooth(frame);
+            smooth(kernel, frame);
             auto smoothEnd = std::chrono::steady_clock::now();
             smoothElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
@@ -117,16 +132,9 @@ void VMD::toGrayScale(cv::Mat& img) {
     img = grey.clone();
 }
 
-void VMD::smooth(cv::Mat& img) {
-    // Gaussian blur kernel
-    uchar kernelData[9] = {1, 2, 1,
-                           2, 4, 2,
-                           1, 2, 1,
-                          };
-
+void VMD::smooth(const cv::Mat& kernel, cv::Mat& img) {
     int border = 1;
     cv::Mat padded;
-    cv::Mat kernel(3, 3, CV_8UC1, kernelData);
     cv::Mat smoothed(img.rows, img.cols, CV_8UC1);
 
     // Pad original image to simplify border handling
@@ -146,7 +154,7 @@ void VMD::smooth(cv::Mat& img) {
         }
     }
 
-	smoothed.copyTo(img);
+    smoothed.copyTo(img);
 }
 
 bool VMD::compareFrame(const cv::Mat& background, const cv::Mat& frame) {
