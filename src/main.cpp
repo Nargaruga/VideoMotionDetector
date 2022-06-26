@@ -1,5 +1,6 @@
 #include <iostream>
 #include "seq/seq_vmd.h"
+#include "threads/threaded_vmd.h"
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
@@ -7,7 +8,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-	SequentialVMD detector;
+	ThreadedVMD detector(8);
+//	SequentialVMD detector;
 	detector.benchmarkRun(argv[1], 10);
 
     return 0;
