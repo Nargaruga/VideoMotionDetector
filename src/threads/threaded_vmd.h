@@ -10,6 +10,7 @@
 class ThreadedVMD : public VMD {
 public:
 	ThreadedVMD(int nw = 1) : m_nw(nw), m_pool(nw) {};
+	~ThreadedVMD();
 
     void run(std::string videoPath);
     void benchmarkRun(std::string videoPath, int tries);
@@ -17,9 +18,11 @@ public:
 private:
 	int m_nw;
 	ThreadPool<void> m_pool;
+	std::atomic_int movementFrames = 0;
+	int totalFrames = 0;
+	int totalElapsed = 0; 
 
-	void smooth(const cv::Mat& kernel, cv::Mat& img);
-	void smoothTask(const cv::Mat& kernel, const cv::Mat& source, cv::Mat& dest, int row);
+	void processFrame(cv::Mat frame, const cv::Mat backround);
 };
 
 #endif

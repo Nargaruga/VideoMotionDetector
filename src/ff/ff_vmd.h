@@ -5,13 +5,14 @@
 
 class FastFlowVMD : public VMD {
 public:
+	FastFlowVMD(int nw = 1) : m_nWorkers(nw) {}
+	~FastFlowVMD() {}
+
     void run(std::string videoPath);
     void benchmarkRun(std::string videoPath, int tries);
 	
 private:
-	void smooth(const cv::Mat& kernel, cv::Mat& img);
-	void smoothTask(const cv::Mat& kernel, const cv::Mat& source, cv::Mat& dest, int row);
-
+	int m_nWorkers;
 };
 
 #endif

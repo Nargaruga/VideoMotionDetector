@@ -3,6 +3,7 @@
 #include <chrono>
 #include <fstream>
 #include <opencv2/core/base.hpp>
+#include <opencv2/highgui.hpp>
 
 void VMD::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
@@ -12,21 +13,13 @@ void VMD::run(std::string videoPath) {
     int movementFrames = 0;
     int totalFrames = 0;
 
-    // Gaussian blur kernel
-    uchar kernelData[9] = {1, 2, 1,
-                           2, 4, 2,
-                           1, 2, 1,
-                          };
-    cv::Mat kernel(3, 3, CV_8UC1, kernelData);
-
-
     while(true) {
         cap >> frame;
         if(frame.empty())
             break;
 
         toGrayScale(frame);
-        smooth(kernel, frame);
+        smooth(frame);
 
         if(background.empty()) {
             background = frame;
@@ -44,7 +37,7 @@ void VMD::run(std::string videoPath) {
 
 void VMD::benchmarkRun(std::string videoPath, int tries) {
     std::ofstream out;
-    out.open("benchmark.csv");
+    out.open("benchmark/benchmark.csv");
 
     out << "Gray;Smooth;Check;Total\n";
 
@@ -56,12 +49,6 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
         int movementFrames = 0;
         int totalFrames = 0;
 
-        // Gaussian blur kernel
-        uchar kernelData[9] = {1, 2, 1,
-                               2, 4, 2,
-                               1, 2, 1,
-                              };
-        cv::Mat kernel(3, 3, CV_8UC1, kernelData);
 
         int grayElapsed = 0;
         int smoothElapsed = 0;
@@ -80,7 +67,7 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
             grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
             auto smoothStart =  std::chrono::steady_clock::now();
-            smooth(kernel, frame);
+            smooth(frame);
             auto smoothEnd = std::chrono::steady_clock::now();
             smoothElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
@@ -132,7 +119,7 @@ void VMD::toGrayScale(cv::Mat& img) {
     img = grey.clone();
 }
 
-void VMD::smooth(const cv::Mat& kernel, cv::Mat& img) {
+void VMD::smooth(cv::Mat& img) {
     int border = 1;
     cv::Mat padded;
     cv::Mat smoothed(img.rows, img.cols, CV_8UC1);
@@ -140,17 +127,25 @@ void VMD::smooth(const cv::Mat& kernel, cv::Mat& img) {
     // Pad original image to simplify border handling
     cv::copyMakeBorder(img, padded, border, border, border, border, cv::BORDER_REPLICATE);
 
+	// Vertical pass
     for(int r = 1; r < padded.rows - 2; r++) {
         for(int c = 1; c < padded.cols - 2; c++) {
-            cv::Mat section = padded(cv::Range(r-1, r+2), cv::Range(c-1, c+2));
-            cv::Mat tmp = section.mul(kernel);
+			int count = 0;
+			for(int i = - 1; i < 2; i++) {
+				count += padded.at<uchar>(r + i, c);	
+			}
+            smoothed.at<uchar>(r, c) = std::floor(count / 3.0);
+        }
+    }
 
-            int count = 0;
-            tmp.forEach<uchar>([&count](uchar res, const int* pos) -> void {
-                count += res;
-            });
-
-            smoothed.at<uchar>(r, c) = std::floor(count / 16.0);
+	// Horizontal pass
+    for(int r = 1; r < padded.rows - 2; r++) {
+        for(int c = 1; c < padded.cols - 2; c++) {
+			int count = 0;
+			for(int i = - 1; i < 2; i++) {
+				count += padded.at<uchar>(r, c + i);	
+			}
+            smoothed.at<uchar>(r, c) = std::floor(count / 3.0);
         }
     }
 
