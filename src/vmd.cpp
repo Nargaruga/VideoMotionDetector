@@ -1,5 +1,4 @@
 #include "vmd.h"
-#include <bits/chrono.h>
 #include <chrono>
 #include <fstream>
 #include <opencv2/core/base.hpp>

@@ -20,5 +20,4 @@ protected:
     bool compareFrame(const cv::Mat& background, const cv::Mat& frame);
 
 };
-
-#endif
+#endif 

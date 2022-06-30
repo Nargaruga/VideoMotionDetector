@@ -1,8 +1,8 @@
 CC = g++
 CFLAGS = -g -O3 -std=c++20 -Wall -pthread
 OCV = `pkg-config --cflags opencv4` `pkg-config --libs opencv4`
-INCLUDE = -I /usr/include/opencv4/ -I lib/fastflow/ff
-MODULES = . threads 
+INCLUDE = -isystem /usr/include/opencv4/ -isystem /usr/local/include/ff/
+MODULES = . threads ff
 SRCDIR = $(addprefix src/,$(MODULES)) 
 OBJDIR = $(addprefix build/,$(MODULES))
 SRC = $(foreach sdir,$(SRCDIR),$(wildcard $(sdir)/*.cpp))
@@ -12,7 +12,7 @@ vpath %.cpp $(SRCDIR)
 
 define make-goal
 $1/%.o: %.cpp
-	$(CC) $(CFLAGS) -c $$< -o $$@
+	$(CC) $(CFLAGS) $(INCLUDE) -c $$< -o $$@
 endef
 
 .PHONY: clean checkdirs all

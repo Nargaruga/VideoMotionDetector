@@ -1,5 +1,5 @@
 #include "threaded_vmd.h"
-#include <bits/chrono.h>
+#include <chrono>
 #include <fstream>
 #include <future>
 #include <functional>
