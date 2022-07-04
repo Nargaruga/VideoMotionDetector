@@ -1,32 +1,38 @@
 #include "vmd.h"
+#include "opencv2/core/matx.hpp"
+#include "vmd_frame.h"
 #include <chrono>
 #include <fstream>
 #include <opencv2/core/base.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/videoio.hpp>
 
 void VMD::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
-    cv::Mat background;
-    cv::Mat frame;
+    VMDFrame background;
+    VMDFrame frame;
 
     int movementFrames = 0;
     int totalFrames = 0;
 
     while(true) {
-        cap >> frame;
-        if(frame.empty())
+        cv::Mat frameContents;
+        cap >> frameContents;
+        if(frameContents.empty())
             break;
 
-        toGrayScale(frame);
-        smooth(frame);
+        frame.setContents(frameContents);
+        frame.toGrayScale();
+        frame.smooth();
 
-        if(background.empty()) {
+        if(background.isEmpty()) {
             background = frame;
-        } else if(compareFrame(background, frame)) {
-            movementFrames++;
-        }
+        } else {
+            if(frame.compareTo(background))
+                movementFrames++;
 
-        totalFrames++;
+            totalFrames++;
+        }
     }
 
     cap.release();
@@ -42,8 +48,9 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
 
     for(int i = 0; i < tries; i++) {
         cv::VideoCapture cap(videoPath);
-        cv::Mat background;
-        cv::Mat frame;
+        VMDFrame background;
+        VMDFrame frame;
+        cv::Mat frameContents;
 
         int movementFrames = 0;
         int totalFrames = 0;
@@ -56,32 +63,34 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
 
         auto start = std::chrono::steady_clock::now();
         while(true) {
-            cap >> frame;
-            if(frame.empty())
+            cap >> frameContents;
+            if(frameContents.empty())
                 break;
 
+            frame.setContents(frameContents);
+
             auto grayStart =  std::chrono::steady_clock::now();
-            toGrayScale(frame);
+            frame.toGrayScale();
             auto grayEnd = std::chrono::steady_clock::now();
             grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
             auto smoothStart =  std::chrono::steady_clock::now();
-            smooth(frame);
+            frame.smooth();
             auto smoothEnd = std::chrono::steady_clock::now();
             smoothElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
-            if(background.empty()) {
+            if(background.isEmpty()) {
                 background = frame;
             } else {
                 auto compareStart =  std::chrono::steady_clock::now();
-                if(compareFrame(background, frame)) {
+                if(frame.compareTo(background)) {
                     movementFrames++;
                 }
+                totalFrames++;
                 auto compareEnd = std::chrono::steady_clock::now();
                 compareElapsed += std::chrono::duration_cast<std::chrono::microseconds> (compareEnd - compareStart).count();
             }
 
-            totalFrames++;
         }
         auto end = std::chrono::steady_clock::now();
         totalElapsed = std::chrono::duration_cast<std::chrono::microseconds> (end - start).count();
@@ -100,77 +109,3 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
     out.close();
 }
 
-void VMD::toGrayScale(cv::Mat& img) {
-    cv::Mat grey(img.rows, img.cols, CV_8UC1);
-
-    for(int r = 0; r < img.rows; r++) {
-        for(int c = 0; c < img.cols; c++) {
-            cv::Vec3b intensity = img.at<cv::Vec3b>(r, c);
-            uchar red = intensity.val[2];
-            uchar green	= intensity.val[1];
-            uchar blue = intensity.val[0];
-
-            uchar value = std::floor((red + green + blue) / 3.0);
-            grey.at<uchar>(r, c) = value;
-        }
-    }
-
-    img = grey.clone();
-}
-
-void VMD::smooth(cv::Mat& img) {
-    int border = 1;
-    cv::Mat padded;
-    cv::Mat smoothed(img.rows, img.cols, CV_8UC1);
-
-    // Pad original image to simplify border handling
-    cv::copyMakeBorder(img, padded, border, border, border, border, cv::BORDER_REPLICATE);
-
-	// Vertical pass
-    for(int r = 1; r < padded.rows - 2; r++) {
-        for(int c = 1; c < padded.cols - 2; c++) {
-			int count = 0;
-			for(int i = - 1; i < 2; i++) {
-				count += padded.at<uchar>(r + i, c);	
-			}
-            smoothed.at<uchar>(r, c) = std::floor(count / 3.0);
-        }
-    }
-
-	// Horizontal pass
-    for(int r = 1; r < padded.rows - 2; r++) {
-        for(int c = 1; c < padded.cols - 2; c++) {
-			int count = 0;
-			for(int i = - 1; i < 2; i++) {
-				count += padded.at<uchar>(r, c + i);	
-			}
-            smoothed.at<uchar>(r, c) = std::floor(count / 3.0);
-        }
-    }
-
-    smoothed.copyTo(img);
-}
-
-bool VMD::compareFrame(const cv::Mat& background, const cv::Mat& frame) {
-    //TODO throw an error
-    if(background.rows != frame.rows || background.cols != frame.cols)
-        return false;
-
-    int count = 0;
-    int pixelThreshold = std::round(threshold * background.rows * background.cols);
-
-    for(int r = 0; r < background.rows; r++) {
-        for(int c = 0; c < background.cols; c++) {
-            uchar a = background.at<uchar>(r, c);
-            uchar b = frame.at<uchar>(r, c);
-
-            if(abs(a - b) >= 5)
-                count++;
-
-            if(count > pixelThreshold)
-                return true;
-        }
-    }
-
-    return false;
-}

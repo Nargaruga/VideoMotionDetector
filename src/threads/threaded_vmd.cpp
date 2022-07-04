@@ -6,32 +6,36 @@
 #include <opencv2/core/base.hpp>
 
 ThreadedVMD::~ThreadedVMD() {
-	m_pool.conclude();
+    m_pool.conclude();
 }
 
 //TODO ancora da modificare
 void ThreadedVMD::run(std::string videoPath) {
     cv::VideoCapture cap(videoPath);
-    cv::Mat background;
-    cv::Mat frame;
+    VMDFrame background;
+    VMDFrame frame;
+    cv::Mat frameContents;
 
     int movementFrames = 0;
     int totalFrames = 0;
 
     while(true) {
-        cap >> frame;
-        if(frame.empty())
+        cap >> frameContents;
+        if(frameContents.empty())
             break;
 
-        toGrayScale(frame);
-        smooth(frame);
+        frame.setContents(frameContents);
+        frame.toGrayScale();
+        frame.smooth();
 
-        if(background.empty()) {
+        if(background.isEmpty()) {
             background = frame;
-        } else if(compareFrame(background, frame)) {
-            movementFrames++;
+        } else {
+            if(frame.compareTo(background))
+                movementFrames++;
+
+            totalFrames++;
         }
-        totalFrames++;
     }
 
     cap.release();
@@ -47,29 +51,32 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
 
     for(int i = 0; i < tries; i++) {
         cv::VideoCapture cap(videoPath);
-        cv::Mat background;
-        cv::Mat frame;
+        VMDFrame background;
+        VMDFrame frame;
+        cv::Mat frameContents;
 
-		movementFrames = 0;
-		totalFrames = 0;
-		totalElapsed = 0;
+        movementFrames = 0;
+        totalFrames = 0;
+        totalElapsed = 0;
 
         auto start = std::chrono::steady_clock::now();
-        cap >> background;
-        if(background.empty())
-            break;
-        toGrayScale(background);
-        smooth(background);
-    	totalFrames++;
-
         while(true) {
-            cap >> frame;
-            if(frame.empty())
+            cap >> frameContents;
+            if(frameContents.empty())
                 break;
 
-            std::packaged_task<void()> task(std::bind(&ThreadedVMD::processFrame, this, frame.clone(), background));
-            m_pool.insertTask(std::move(task));
-			totalFrames++;
+            frame.setContents(frameContents);
+
+            if(background.isEmpty()) {
+                background = frame;
+                background.toGrayScale();
+                background.smooth();
+            } else {
+                std::packaged_task<void()> task(std::bind(&ThreadedVMD::processFrame, this, frame, background));
+                m_pool.insertTask(std::move(task));
+
+                totalFrames++;
+            }
         }
         cap.release();
 
@@ -87,11 +94,11 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
     out.close();
 }
 
-void ThreadedVMD::processFrame(cv::Mat frame, const cv::Mat background) {
-    toGrayScale(frame);
-    smooth(frame);
+void ThreadedVMD::processFrame(VMDFrame& frame, const VMDFrame& background) {
+    frame.toGrayScale();
+    frame.smooth();
 
-    if(compareFrame(background, frame)) {
+    if(frame.compareTo(background)) {
         movementFrames++;
     }
 }

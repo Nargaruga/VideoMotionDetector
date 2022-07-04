@@ -2,6 +2,7 @@
 #define THREADED_VMD_H
 
 #include "../vmd.h"
+#include "../vmd_frame.h"
 #include "thread_pool.h"
 #include <opencv2/opencv.hpp>
 #include <string>
@@ -22,7 +23,7 @@ private:
 	int totalFrames = 0;
 	int totalElapsed = 0; 
 
-	void processFrame(cv::Mat frame, const cv::Mat backround);
+	void processFrame(VMDFrame& frame, const VMDFrame& backround);
 };
 
 #endif

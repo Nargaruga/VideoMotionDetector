@@ -1,7 +1,7 @@
 CC = g++
-CFLAGS = -g -O3 -std=c++20 -Wall -pthread
-OCV = `pkg-config --cflags opencv4` `pkg-config --libs opencv4`
-INCLUDE = -isystem /usr/include/opencv4/ -isystem /usr/local/include/ff/
+CFLAGS = -g -std=c++20 -Wall -pthread
+LIBS =  `pkg-config --libs opencv4`
+INCLUDE = -isystem /usr/local/include/ff/ `pkg-config --cflags opencv4`
 MODULES = . threads ff
 SRCDIR = $(addprefix src/,$(MODULES)) 
 OBJDIR = $(addprefix build/,$(MODULES))
@@ -20,7 +20,7 @@ endef
 all: checkdirs motionDetector 
 
 motionDetector: $(OBJ)  
-	$(CC) $(CFLAGS) $(OCV) $^ -o $@ 
+	$(CC) $(LIBS) $^ -o $@ 
  
 checkdirs: $(OBJDIR)
 
