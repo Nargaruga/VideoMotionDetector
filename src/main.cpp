@@ -19,16 +19,18 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::string videoPath = argv[1];
-    int mode = 0;
-    int tries = 1;
-    int workers = 1;
-    bool benchmark = false;
+    std::string videoPath = argv[1];	// Path of the video to analyze
+    int mode = 0;						//	Whether to run in sequential, threaded or FF mode
+    int tries = 1;						// Number of benchmark tests
+    int workers = 1;					// Parallelism degree
+    bool benchmark = false; 			// Whether to measure execution times or not
 
+	// Parse command line arguments
     for(int i = 2; i < argc; i++) {
         std::string arg(argv[i]);
 
         if(arg == "-m") {
+			// Mode 
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -41,6 +43,7 @@ int main(int argc, char* argv[]) {
             }
 
         } else if(arg == "-t") {
+			// Number of tries
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -53,6 +56,7 @@ int main(int argc, char* argv[]) {
             }
 
         } else if(arg == "-w") {
+			// Parallelism degree
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -64,6 +68,7 @@ int main(int argc, char* argv[]) {
                 return -1;
             }
         } else if(arg == "-b") {
+			// Enable time measurements
             benchmark = true;
         }
     }

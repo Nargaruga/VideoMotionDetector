@@ -15,6 +15,7 @@ void VMD::run(std::string videoPath) {
     int movementFrames = 0;
     int totalFrames = 0;
 
+	// Read video frames until EOF
     while(true) {
         cv::Mat frameContents;
         cap >> frameContents;
@@ -23,12 +24,12 @@ void VMD::run(std::string videoPath) {
 
         frame.setContents(frameContents);
         frame.toGrayScale();
-        frame.smooth();
+        frame.blur();
 
         if(background.isEmpty()) {
             background = frame;
         } else {
-            if(frame.compareTo(background))
+            if(frame.checkForMovement(background))
                 movementFrames++;
 
             totalFrames++;
@@ -41,9 +42,9 @@ void VMD::run(std::string videoPath) {
 }
 
 void VMD::benchmarkRun(std::string videoPath, int tries) {
+	// Prepare the benchmark output file
     std::ofstream out;
     out.open("benchmark/benchmark.csv");
-
     out << "Gray;Smooth;Check;Total\n";
 
     for(int i = 0; i < tries; i++) {
@@ -55,13 +56,14 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
         int movementFrames = 0;
         int totalFrames = 0;
 
-
+		// Time measurements for the various phases
         int grayElapsed = 0;
-        int smoothElapsed = 0;
+        int blurElapsed = 0;
         int compareElapsed = 0;
         int totalElapsed = 0;
 
         auto start = std::chrono::steady_clock::now();
+		// Read video frames until EOF
         while(true) {
             cap >> frameContents;
             if(frameContents.empty())
@@ -75,15 +77,15 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
             grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
             auto smoothStart =  std::chrono::steady_clock::now();
-            frame.smooth();
+            frame.blur();
             auto smoothEnd = std::chrono::steady_clock::now();
-            smoothElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
+            blurElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
             if(background.isEmpty()) {
                 background = frame;
             } else {
                 auto compareStart =  std::chrono::steady_clock::now();
-                if(frame.compareTo(background)) {
+                if(frame.checkForMovement(background)) {
                     movementFrames++;
                 }
                 totalFrames++;
@@ -100,7 +102,7 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
         std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 
         out << round(grayElapsed / totalFrames) << ";"
-            << round(smoothElapsed / totalFrames) << ";"
+            << round(blurElapsed / totalFrames) << ";"
             << round(compareElapsed / totalFrames) << ";"
             << totalElapsed << "\n";
     }

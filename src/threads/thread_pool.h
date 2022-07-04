@@ -101,14 +101,14 @@ public:
     };
 
 private:
-    std::atomic_bool m_stop = false; // When true, the threadpool will close
-    int m_nWorkers;                   // Number of workers in the pool
-    std::vector<std::thread> m_workers;
-    std::deque<std::packaged_task<R()>> m_tasks;
-	std::atomic_int m_pendingTasks = 0;
-    std::mutex m_mtx;               // Mutex for synchronized access to the task queue
-    std::condition_variable m_cond; // Needed to avoid active wait when the queue is empty
-    std::condition_variable m_doneCond; // Used to wait for the queue to empty
+    std::atomic_bool m_stop = false;				// When true, the threadpool will close
+    int m_nWorkers;                   				// Number of workers in the pool
+    std::vector<std::thread> m_workers; 			// Pool of workers
+    std::deque<std::packaged_task<R()>> m_tasks; 	// Task queue
+    std::atomic_int m_pendingTasks = 0; 			// Number of pending tasks
+    std::mutex m_mtx;               				// Mutex for synchronized access to the task queue
+    std::condition_variable m_cond; 				// Needed to avoid active wait when the queue is empty
+    std::condition_variable m_doneCond; 			// Used to wait for the queue to empty
 };
 
 #endif
