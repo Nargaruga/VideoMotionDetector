@@ -4,32 +4,33 @@
 #include "threads/threaded_vmd.h"
 #include "ff/vmd_ff.h"
 
+std::string usageString(
+    "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS -b\n\
+		At least VIDEO_PATH must be specified.");
+
 int main(int argc, char* argv[]) {
     if(argc < 2) {
-        std::cout << "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS" << std::endl;
-        std::cout << "At least VIDEO_PATH must be specified." << std::endl;
+        std::cout << usageString << std::endl;
         return -1;
     }
 
-    if(argc > 8) {
-        std::cout << "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS" << std::endl;
+    if(argc > 9) {
+        std::cout << usageString << std::endl;
         return -1;
     }
-
-
 
     std::string videoPath = argv[1];
     int mode = 0;
     int tries = 1;
     int workers = 1;
+    bool benchmark = false;
 
     for(int i = 2; i < argc; i++) {
         std::string arg(argv[i]);
 
         if(arg == "-m") {
             if(i == argc - 1) {
-                std::cout << "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS" << std::endl;
-                std::cout << "At least VIDEO_PATH must be specified." << std::endl;
+                std::cout << usageString << std::endl;
                 return -1;
             } else {
                 mode = atoi(argv[i+1]);
@@ -41,8 +42,7 @@ int main(int argc, char* argv[]) {
 
         } else if(arg == "-t") {
             if(i == argc - 1) {
-                std::cout << "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS" << std::endl;
-                std::cout << "At least VIDEO_PATH must be specified." << std::endl;
+                std::cout << usageString << std::endl;
                 return -1;
             } else {
                 tries = atoi(argv[i+1]);
@@ -54,8 +54,7 @@ int main(int argc, char* argv[]) {
 
         } else if(arg == "-w") {
             if(i == argc - 1) {
-                std::cout << "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS" << std::endl;
-                std::cout << "At least VIDEO_PATH must be specified." << std::endl;
+                std::cout << usageString << std::endl;
                 return -1;
             } else {
                 workers = atoi(argv[i+1]);
@@ -64,7 +63,8 @@ int main(int argc, char* argv[]) {
                 std::cout << "WORKERS must be in [1, 64]." << std::endl;
                 return -1;
             }
-
+        } else if(arg == "-b") {
+            benchmark = true;
         }
     }
 
@@ -84,7 +84,10 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    detector->run(videoPath);
+    if(benchmark)
+        detector->benchmarkRun(videoPath, tries);
+    else
+        detector->run(videoPath);
 
     return 0;
 }

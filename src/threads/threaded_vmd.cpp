@@ -53,7 +53,6 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
         cv::VideoCapture cap(videoPath);
         VMDFrame background;
         VMDFrame frame;
-        cv::Mat frameContents;
 
         movementFrames = 0;
         totalFrames = 0;
@@ -61,6 +60,7 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
 
         auto start = std::chrono::steady_clock::now();
         while(true) {
+        	cv::Mat frameContents;
             cap >> frameContents;
             if(frameContents.empty())
                 break;

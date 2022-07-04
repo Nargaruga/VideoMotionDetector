@@ -27,6 +27,7 @@ public:
     }
 
     void run(std::string videoPath);
+    void benchmarkRun(std::string videoPath, int tries);
 
     class Emitter : public ff::ff_node_t<VMDFrame> {
     public:
