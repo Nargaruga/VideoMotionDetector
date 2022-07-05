@@ -12,21 +12,25 @@ void FastFlowVMD::benchmarkRun(std::string videoPath, int tries) {
     std::ofstream out;
     for(int i = 0; i < tries; i++) {
         out.open("benchmark/benchmark.csv");
+        out << "Setup;Total\n";
 
-        out << "Total\n";
+		int setupElapsed = 0;
         int totalElapsed = 0;
 
-        auto start = std::chrono::steady_clock::now();
-
+        auto setupStart = std::chrono::steady_clock::now();
         Emitter emitter(videoPath);
         Collector collector;
         ff::ff_Farm<bool> farm(std::move(m_workers), emitter, collector);
+        auto setupEnd = std::chrono::steady_clock::now();
+        setupElapsed = std::chrono::duration_cast<std::chrono::microseconds> (setupEnd - setupStart).count();
+
+        auto totalStart = std::chrono::steady_clock::now();
         farm.run_and_wait_end();
-        auto end = std::chrono::steady_clock::now();
+        auto totalEnd = std::chrono::steady_clock::now();
+        totalElapsed = std::chrono::duration_cast<std::chrono::microseconds> (totalEnd - totalStart).count();
 
-        totalElapsed = std::chrono::duration_cast<std::chrono::microseconds> (end - start).count();
-
-        out << totalElapsed << "\n";
+        out << setupElapsed << ";" 
+			<< totalElapsed << "\n";
     }
 
     out.close();

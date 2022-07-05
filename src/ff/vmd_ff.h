@@ -66,7 +66,7 @@ private:
         /*
          *	Reads frames and sends them out to workers.
          */
-        VMDFrame* svc(VMDFrame* dummy) {
+        VMDFrame* svc(VMDFrame*) {
             VMDFrame frame;
 
             while(true) {

@@ -15,14 +15,14 @@
 class ThreadedVMD : public VMD {
 public:
 	/*
-	 *	The threadpool is initialized with `nw` workers.
+	 *	Constructs the threaded VMD with the specified number of workers.	
 	 */
-	ThreadedVMD(int nw = 1) : m_nw(nw), m_pool(nw) {};
+	ThreadedVMD(int nw = 1) : m_nw(nw) {}
 
 	/*
 	 * Default destructor.
 	 */
-	~ThreadedVMD();
+	~ThreadedVMD() {}
 
 	/*
 	 * Run the video motion detection algorithm on the video
@@ -39,10 +39,7 @@ public:
 	
 private:
 	int m_nw;							// Number of workers in the thread pool
-	ThreadPool<void> m_pool;			// Thread pool for handling tasks
 	std::atomic_int movementFrames = 0; // Number of frames in which movement was detected
-	int totalFrames = 0;				// Total number of frames
-	int totalElapsed = 0; 				// Total elapsed time
 
 	/*
 	 *	Perform a complete processing of the frame `frame`.
