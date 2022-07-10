@@ -25,12 +25,12 @@ int main(int argc, char* argv[]) {
     int workers = 1;					// Parallelism degree
     bool benchmark = false; 			// Whether to measure execution times or not
 
-	// Parse command line arguments
+    // Parse command line arguments
     for(int i = 2; i < argc; i++) {
         std::string arg(argv[i]);
 
         if(arg == "-m") {
-			// Mode 
+            // Mode
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
             }
 
         } else if(arg == "-t") {
-			// Number of tries
+            // Number of tries
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
             }
 
         } else if(arg == "-w") {
-			// Parallelism degree
+            // Parallelism degree
             if(i == argc - 1) {
                 std::cout << usageString << std::endl;
                 return -1;
@@ -68,32 +68,47 @@ int main(int argc, char* argv[]) {
                 return -1;
             }
         } else if(arg == "-b") {
-			// Enable time measurements
+            // Enable time measurements
             benchmark = true;
         }
     }
 
-    std::unique_ptr<VMD> detector;
-    switch(mode) {
-    case 0:
-        detector = std::unique_ptr<VMD>(new VMD());
-        break;
-    case 1:
-        detector = std::unique_ptr<ThreadedVMD>(new ThreadedVMD(workers));
-        break;
-    case 2:
-        detector = std::unique_ptr<FastFlowVMD>(new FastFlowVMD(workers));
-        break;
+//    for(int i = 1; i < 9; i++) {
+//        workers = i; //TODO temporary...
+        std::string modeStr;
+        std::unique_ptr<VMD> detector;
+        switch(mode) {
+        case 0:
+            modeStr = "seq";
+            detector = std::unique_ptr<VMD>(new VMD());
+            break;
+        case 1:
+            modeStr = "thread";
+            detector = std::unique_ptr<ThreadedVMD>(new ThreadedVMD(workers));
+            break;
+        case 2:
+            modeStr = "ff";
+            detector = std::unique_ptr<FastFlowVMD>(new FastFlowVMD(workers));
+            break;
 
-    default:
-        return -1;
-    }
+        default:
+            return -1;
+        }
 
-    if(benchmark)
-        detector->benchmarkRun(videoPath, tries);
-    else
-        detector->run(videoPath);
+
+        if(benchmark) {
+            std::string outFilePath("benchmark/"
+                                    + modeStr
+                                    + "/benchmark_"
+                                    + modeStr + "_"
+                                    + (workers < 10 ? "0" + std::to_string(workers) : std::to_string(workers))
+                                    + ".csv");
+            detector->benchmarkRun(videoPath, tries, outFilePath);
+        }
+        else {
+            detector->run(videoPath);
+        }
+//    }
 
     return 0;
 }
-

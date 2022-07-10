@@ -35,7 +35,7 @@ public:
 	 * located at the specified path a number of times equal to
 	 * 'tries'. Time measurements are outputted to /benchmark/benchmark.cvs.
 	 */
-    void benchmarkRun(std::string videoPath, int tries);
+    void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 	
 private:
 	int m_nw;							// Number of workers in the thread pool

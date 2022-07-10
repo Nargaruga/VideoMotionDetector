@@ -68,6 +68,7 @@ public:
             // Get a task and execute it
             auto task = std::move(m_tasks.front());
             m_tasks.pop_front();
+
             lck.unlock();
 
             task();

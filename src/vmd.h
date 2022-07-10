@@ -31,6 +31,6 @@ public:
 	 * located at the specified path a number of times equal to
 	 * 'tries'. Time measurements are outputted to /benchmark/benchmark.cvs.
 	 */
-    virtual void benchmarkRun(std::string videoPath, int tries);
+    virtual void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 };
 #endif 

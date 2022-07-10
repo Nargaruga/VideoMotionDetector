@@ -6,6 +6,7 @@
 #include <ff/ff.hpp>
 #include <ff/farm.hpp>
 #include <ff/node.hpp>
+#include <string>
 #include <future>
 #include <memory>
 #include <opencv2/videoio.hpp>
@@ -29,11 +30,7 @@ public:
     /*
      *	Constructs the FF VMD with the desired number of workers.
      */
-    FastFlowVMD(int nWorkers = 1)  {
-        for(int i = 0; i < nWorkers; i++) {
-            m_workers.push_back(ff::make_unique<Worker>());
-        }
-    }
+    FastFlowVMD(int nWorkers = 1) : m_nWorkers(nWorkers) {}
 
     /*
      * Run the video motion detection algorithm on the video
@@ -46,10 +43,11 @@ public:
      * located at the specified path a number of times equal to
      * 'tries'. Time measurements are outputted to /benchmark/benchmark.cvs.
      */
-    void benchmarkRun(std::string videoPath, int tries);
+    void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 
 private:
-	std::vector<std::unique_ptr<ff::ff_node>> m_workers;	// Farm workers
+    int m_nWorkers;
+    std::vector<std::unique_ptr<ff::ff_node>> m_workers;	// Farm workers
 
     /*
      *	Emitter class responsible for reading frames and
@@ -67,7 +65,6 @@ private:
          *	Reads frames and sends them out to workers.
          */
         VMDFrame* svc(VMDFrame*) {
-            VMDFrame frame;
 
             while(true) {
                 cv::Mat frameContents;
@@ -75,14 +72,14 @@ private:
                 if(frameContents.empty())
                     break;
 
-                frame.setContents(frameContents);
-
                 if(background.isEmpty()) {
                     // Before processing any other frame, the background must be prepared
-                    background = frame;
+                    background.setContents(frameContents); 
                     background.toGrayScale();
                     background.blur();
                 } else {
+                	VMDFrame frame;
+                	frame.setContents(frameContents);
                     ff_send_out(new ToCompare(frame, background));
                 }
             }
@@ -107,14 +104,14 @@ private:
 
             bool res = false;
 
-            VMDFrame frame = framesPtr->frame;
-            VMDFrame background = framesPtr->background;
+            VMDFrame& frame = framesPtr->frame;
+            const VMDFrame& background = framesPtr->background;
 
             frame.toGrayScale();
             frame.blur();
             res = frame.checkForMovement(background);
 
-            free(framesPtr);
+            delete framesPtr;
 
             return new bool(res);
         }
@@ -139,7 +136,7 @@ private:
                 movementFrames++;
             }
 
-            free(movementDetectedPtr);
+            delete movementDetectedPtr;
 
             return ff::FF_GO_ON;
         }

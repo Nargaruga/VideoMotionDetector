@@ -1,5 +1,6 @@
 #include "vmd.h"
 #include "opencv2/core/matx.hpp"
+#include "opencv2/highgui.hpp"
 #include "vmd_frame.h"
 #include <chrono>
 #include <fstream>
@@ -15,7 +16,7 @@ void VMD::run(std::string videoPath) {
     int movementFrames = 0;
     int totalFrames = 0;
 
-	// Read video frames until EOF
+    // Read video frames until EOF
     while(true) {
         cv::Mat frameContents;
         cap >> frameContents;
@@ -27,11 +28,10 @@ void VMD::run(std::string videoPath) {
         frame.blur();
 
         if(background.isEmpty()) {
-            background = frame;
+            background.setContents(frame.getContents());
         } else {
             if(frame.checkForMovement(background))
                 movementFrames++;
-
             totalFrames++;
         }
     }
@@ -41,11 +41,14 @@ void VMD::run(std::string videoPath) {
     std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 }
 
-void VMD::benchmarkRun(std::string videoPath, int tries) {
-	// Prepare the benchmark output file
-    std::ofstream out;
-    out.open("benchmark/benchmark.csv");
-    out << "Gray;Smooth;Check;Total\n";
+void VMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath) {
+    // Prepare the benchmark output file
+    std::ofstream out(outFilePath);
+    if(!out.is_open()) {
+        std::cerr << "Failed to open the benchmark file. Closing." << std::endl;
+        return;
+    }
+    out << "Gray;Blur;Check;Total\n";
 
     for(int i = 0; i < tries; i++) {
         cv::VideoCapture cap(videoPath);
@@ -56,14 +59,14 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
         int movementFrames = 0;
         int totalFrames = 0;
 
-		// Time measurements for the various phases
+        // Time measurements for the various phases
         int grayElapsed = 0;
         int blurElapsed = 0;
         int compareElapsed = 0;
         int totalElapsed = 0;
 
         auto start = std::chrono::steady_clock::now();
-		// Read video frames until EOF
+        // Read video frames until EOF
         while(true) {
             cap >> frameContents;
             if(frameContents.empty())
@@ -82,15 +85,16 @@ void VMD::benchmarkRun(std::string videoPath, int tries) {
             blurElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
 
             if(background.isEmpty()) {
-                background = frame;
+                background.setContents(frame.getContents());
             } else {
                 auto compareStart =  std::chrono::steady_clock::now();
                 if(frame.checkForMovement(background)) {
                     movementFrames++;
                 }
-                totalFrames++;
                 auto compareEnd = std::chrono::steady_clock::now();
                 compareElapsed += std::chrono::duration_cast<std::chrono::microseconds> (compareEnd - compareStart).count();
+
+                totalFrames++;
             }
 
         }

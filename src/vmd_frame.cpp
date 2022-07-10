@@ -1,59 +1,53 @@
 #include "vmd_frame.h"
+#include "opencv2/core/matx.hpp"
 
 void VMDFrame::toGrayScale() {
     cv::Mat grey(m_contents.rows, m_contents.cols, CV_8UC1);
 
     for(int r = 0; r < m_contents.rows; r++) {
+		const cv::Vec3b* rowA = m_contents.ptr<cv::Vec3b>(r);
+		uchar* rowB = grey.ptr<uchar>(r);
+
         for(int c = 0; c < m_contents.cols; c++) {
-            cv::Vec3b intensity = m_contents.at<cv::Vec3b>(r, c);
+            cv::Vec3b intensity = rowA[c];
+
             uchar red = intensity.val[2];
             uchar green	= intensity.val[1];
             uchar blue = intensity.val[0];
 
-			// Compte the pixel's intensity
+            // Compte the pixel's intensity
             uchar value = std::floor((red + green + blue) / 3.0);
-            grey.at<uchar>(r, c) = value;
+            rowB[c] = value;
         }
     }
 
-	m_contents = grey;
+    m_contents = grey;
 }
 
 void VMDFrame::blur() {
-    int border = 1;
+    int border = 3;
     cv::Mat padded;
     cv::Mat blurred(m_contents.rows, m_contents.cols, CV_8UC1);
-
+	
     // Pad original image to simplify border handling
     cv::copyMakeBorder(m_contents, padded, border, border, border, border, cv::BORDER_REPLICATE);
 
-	// Blurring is done by applying a 3x3 convolution matrix of 1s.
-	// We Split the convolution in two passes in order to reduce the total number of
-	// per-pixel operations from 9 to 6.
+	// Convolution with 7x7 kernel of 1s
+    for(int r = 0; r < blurred.rows; r++) {
+        for(int c = 0; c < blurred.cols; c++) {
 
-    // Vertical pass
-    for(int r = 1; r < padded.rows - 2; r++) {
-        for(int c = 1; c < padded.cols - 2; c++) {
             int count = 0;
-            for(int i = - 1; i < 2; i++) {
-                count += padded.at<uchar>(r + i, c);
+            for(int x = -border; x <= border; x++) {
+                for(int y = -border; y <= border; y++) {
+                    count += padded.at<uchar>(r+x, c+y);
+                }
             }
-            blurred.at<uchar>(r, c) = std::floor(count / 3.0);
+
+            blurred.at<uchar>(r, c) = std::floor(count / 49.0);
         }
     }
 
-    // Horizontal pass
-    for(int r = 1; r < padded.rows - 2; r++) {
-        for(int c = 1; c < padded.cols - 2; c++) {
-            int count = 0;
-            for(int i = - 1; i < 2; i++) {
-                count += padded.at<uchar>(r, c + i);
-            }
-            blurred.at<uchar>(r, c) = std::floor(count / 3.0);
-        }
-    }
-
-	m_contents = blurred;
+    m_contents = blurred;
 }
 
 bool VMDFrame::checkForMovement(const VMDFrame& other) const {
@@ -61,7 +55,7 @@ bool VMDFrame::checkForMovement(const VMDFrame& other) const {
         return false;
 
     int count = 0;
-	// We detect movement if more than 10% of the pixels differ
+    // We detect movement if more than 10% of the pixels differ
     int pixelThreshold = std::round(0.1 * m_contents.rows * m_contents.cols);
 
     for(int r = 0; r < m_contents.rows; r++) {
@@ -69,7 +63,7 @@ bool VMDFrame::checkForMovement(const VMDFrame& other) const {
             uchar a = m_contents.at<uchar>(r, c);
             uchar b = other.getContents().at<uchar>(r, c);
 
-			// We consider two pixels to be different if their value differs by at least 5 points
+            // We consider two pixels to be different if their value differs by at least 5 points
             if(abs(a - b) >= 5)
                 count++;
 

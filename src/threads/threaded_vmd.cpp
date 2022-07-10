@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 #include <functional>
+#include <iostream>
 #include <opencv2/core/base.hpp>
 
 void ThreadedVMD::run(std::string videoPath) {
@@ -21,15 +22,14 @@ void ThreadedVMD::run(std::string videoPath) {
         if(frameContents.empty())
             break;
 
-        frame.setContents(frameContents);
-
         if(background.isEmpty()) {
             // The background must be processed first
-            background = frame;
+            background.setContents(frameContents);
             background.toGrayScale();
             background.blur();
         } else {
             //Send out tasks to the pool
+        	frame.setContents(frameContents);
             std::packaged_task<void()> task(std::bind(
                                                 &ThreadedVMD::processFrame,
                                                 this,
@@ -48,10 +48,13 @@ void ThreadedVMD::run(std::string videoPath) {
 
 }
 
-void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
+void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath) {
     // Prepare the benchmark output file
-    std::ofstream out;
-    out.open("benchmark/benchmark.csv");
+    std::ofstream out(outFilePath);
+	if(!out.is_open()) {
+		std::cerr << "Failed to open the benchmark file. Closing." << std::endl;
+		return;
+	}
     out << "Pool init;Total\n";
 
     for(int i = 0; i < tries; i++) {
@@ -79,15 +82,14 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries) {
             if(frameContents.empty())
                 break;
 
-            frame.setContents(frameContents);
-
             if(background.isEmpty()) {
                 // The background must be processed first
-                background = frame;
+                background.setContents(frameContents);
                 background.toGrayScale();
                 background.blur();
             } else {
                 //Send out tasks to the pool
+            	frame.setContents(frameContents);
                 std::packaged_task<void()> task(std::bind(
                                                     &ThreadedVMD::processFrame,
                                                     this,
