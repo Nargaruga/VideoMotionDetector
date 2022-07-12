@@ -43,7 +43,7 @@ private:
 	/*
 	 *	Completely processes `frame`.	
 	 */
-	bool processFrame(VMDFrame& frame, const VMDFrame& backround);
+	bool processFrame(VMDFrame frame, const VMDFrame& backround);
 };
 
 #endif

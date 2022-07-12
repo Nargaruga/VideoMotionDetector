@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-//    for(int i = 1; i < 9; i++) {
-//        workers = i; //TODO temporary...
+    for(int i = 1; i < 9; i++) {
+        workers = i; //TODO temporary...
         std::string modeStr;
         std::unique_ptr<VMD> detector;
         switch(mode) {
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
         else {
             detector->run(videoPath);
         }
-//    }
+    }
 
     return 0;
 }

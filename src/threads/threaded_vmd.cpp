@@ -39,9 +39,9 @@ void ThreadedVMD::run(std::string videoPath) {
             futures.push_back(task.get_future());
             pool.insertTask(std::move(task));
 
-
-            totalFrames++;
         }
+
+		totalFrames++;
     }
     cap.release();
 
@@ -104,9 +104,9 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string out
                                                     background));
                 futures.push_back(task.get_future());
                 pool.insertTask(std::move(task));
-
-                totalFrames++;
             }
+
+            totalFrames++;
         }
         cap.release();
 
@@ -128,7 +128,7 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string out
     out.close();
 }
 
-bool ThreadedVMD::processFrame(VMDFrame& frame, const VMDFrame& background) {
+bool ThreadedVMD::processFrame(VMDFrame frame, const VMDFrame& background) {
     frame.toGrayScale();
     frame.blur();
 

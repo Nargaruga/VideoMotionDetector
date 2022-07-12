@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -O3 -std=c++20 -Wall -pthread 
+CFLAGS = -O3 -std=c++20 -Wall -pthread -DTRACE_FASTFLOW
 LDFLAGS = -pthread
 LIBS =  `pkg-config --libs opencv4`
 INCLUDE = -isystem /usr/local/include/ff/ `pkg-config --cflags opencv4`
