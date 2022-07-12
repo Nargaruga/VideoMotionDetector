@@ -1,5 +1,4 @@
 #include "vmd_frame.h"
-#include "opencv2/core/matx.hpp"
 
 void VMDFrame::toGrayScale() {
     cv::Mat grey(m_contents.rows, m_contents.cols, CV_8UC1);
@@ -12,7 +11,7 @@ void VMDFrame::toGrayScale() {
             uchar green	= intensity.val[1];
             uchar blue = intensity.val[0];
 
-            // Compte the pixel's intensity
+            // Compute the pixel's intensity
             uchar value = std::floor((red + green + blue) / 3.0);
             grey.at<uchar>(r, c) = value;
         }
@@ -25,11 +24,11 @@ void VMDFrame::blur() {
     int border = 3;
     cv::Mat padded;
     cv::Mat blurred(m_contents.rows, m_contents.cols, CV_8UC1);
-	
+
     // Pad original image to simplify border handling
     cv::copyMakeBorder(m_contents, padded, border, border, border, border, cv::BORDER_REPLICATE);
 
-	// Convolution with 7x7 kernel of 1s
+    // Convolution with 7x7 kernel of 1s
     for(int r = 0; r < blurred.rows; r++) {
         for(int c = 0; c < blurred.cols; c++) {
 

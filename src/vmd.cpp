@@ -1,6 +1,4 @@
 #include "vmd.h"
-#include "opencv2/core/matx.hpp"
-#include "opencv2/highgui.hpp"
 #include "vmd_frame.h"
 #include <chrono>
 #include <fstream>

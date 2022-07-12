@@ -2,18 +2,19 @@
 #include <chrono>
 #include <fstream>
 #include <future>
-#include <functional>
 #include <iostream>
 #include <opencv2/core/base.hpp>
 
 void ThreadedVMD::run(std::string videoPath) {
-	ThreadPool<void> pool(m_nw);	
+    ThreadPool<bool> pool(m_nw);
+    std::vector<std::future<bool>> futures;
     cv::VideoCapture cap(videoPath);
     VMDFrame background;
     VMDFrame frame;
     cv::Mat frameContents;
 
-	int totalFrames = 0;
+    int totalFrames = 0;
+    int movementFrames = 0;
 
     // Read video frames until EOF
     while(true) {
@@ -29,20 +30,25 @@ void ThreadedVMD::run(std::string videoPath) {
             background.blur();
         } else {
             //Send out tasks to the pool
-        	frame.setContents(frameContents);
-            std::packaged_task<void()> task(std::bind(
+            frame.setContents(frameContents);
+            std::packaged_task<bool()> task(std::bind(
                                                 &ThreadedVMD::processFrame,
                                                 this,
                                                 frame,
                                                 background));
+            futures.push_back(task.get_future());
             pool.insertTask(std::move(task));
+
 
             totalFrames++;
         }
     }
     cap.release();
 
-    pool.awaitCompletion();
+    for(int i = 0; i < futures.size(); i++) {
+        if(futures[i].get())
+            movementFrames++;
+    }
 
     std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 
@@ -51,26 +57,27 @@ void ThreadedVMD::run(std::string videoPath) {
 void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath) {
     // Prepare the benchmark output file
     std::ofstream out(outFilePath);
-	if(!out.is_open()) {
-		std::cerr << "Failed to open the benchmark file. Closing." << std::endl;
-		return;
-	}
+    if(!out.is_open()) {
+        std::cerr << "Failed to open the benchmark file. Closing." << std::endl;
+        return;
+    }
     out << "Pool init;Total\n";
 
     for(int i = 0; i < tries; i++) {
+        std::vector<std::future<bool>> futures;
         cv::VideoCapture cap(videoPath);
         VMDFrame background;
         VMDFrame frame;
 
         int totalFrames = 0;
-		int setupElapsed = 0;
+        int movementFrames = 0;
+
+        int setupElapsed = 0;
         int totalElapsed = 0;
 
-        movementFrames = 0;
-
-		// Initialize the threadpool while measuring the time necessary to do so 
+        // Initialize the threadpool while measuring the time necessary to do so
         auto poolInitStart = std::chrono::steady_clock::now();
-		ThreadPool<void> pool(m_nw);
+        ThreadPool<bool> pool(m_nw);
         auto poolInitEnd = std::chrono::steady_clock::now();
         setupElapsed = std::chrono::duration_cast<std::chrono::microseconds> (poolInitEnd - poolInitStart).count();
 
@@ -89,12 +96,13 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string out
                 background.blur();
             } else {
                 //Send out tasks to the pool
-            	frame.setContents(frameContents);
-                std::packaged_task<void()> task(std::bind(
+                frame.setContents(frameContents);
+                std::packaged_task<bool()> task(std::bind(
                                                     &ThreadedVMD::processFrame,
                                                     this,
                                                     frame,
                                                     background));
+                futures.push_back(task.get_future());
                 pool.insertTask(std::move(task));
 
                 totalFrames++;
@@ -102,26 +110,27 @@ void ThreadedVMD::benchmarkRun(std::string videoPath, int tries, std::string out
         }
         cap.release();
 
-        pool.awaitCompletion();
+        for(int i = 0; i < futures.size(); i++) {
+            if(futures[i].get())
+                movementFrames++;
+        }
         auto totalEnd = std::chrono::steady_clock::now();
         totalElapsed = std::chrono::duration_cast<std::chrono::microseconds> (totalEnd - totalStart).count();
 
         std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
 
-		// Write benchmark results to a csv file
-        out << setupElapsed << ";" 
-			<< totalElapsed  << "\n";
+        // Write benchmark results to a csv file
+        out << setupElapsed << ";"
+            << totalElapsed  << "\n";
     }
 
 
     out.close();
 }
 
-void ThreadedVMD::processFrame(VMDFrame& frame, const VMDFrame& background) {
+bool ThreadedVMD::processFrame(VMDFrame& frame, const VMDFrame& background) {
     frame.toGrayScale();
     frame.blur();
 
-    if(frame.checkForMovement(background)) {
-        movementFrames++;
-    }
+    return frame.checkForMovement(background);
 }

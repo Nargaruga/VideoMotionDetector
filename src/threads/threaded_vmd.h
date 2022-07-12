@@ -25,26 +25,25 @@ public:
 	~ThreadedVMD() {}
 
 	/*
-	 * Run the video motion detection algorithm on the video
+	 * Runs the video motion detection algorithm on the video
 	 * located at the specified path.
 	 */
     void run(std::string videoPath);
 
 	/*
-	 * Run the video motion detection algorithm on the video
+	 * Runs the video motion detection algorithm on the video
 	 * located at the specified path a number of times equal to
 	 * 'tries'. Time measurements are outputted to outfilepath.
 	 */
     void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 	
 private:
-	int m_nw;							// Number of workers in the thread pool
-	std::atomic_int movementFrames = 0; // Number of frames in which movement was detected
+	int m_nw;								// Number of workers in the thread pool
 
 	/*
-	 *	Perform a complete processing of the frame `frame`.
+	 *	Completely processes `frame`.	
 	 */
-	void processFrame(VMDFrame& frame, const VMDFrame& backround);
+	bool processFrame(VMDFrame& frame, const VMDFrame& backround);
 };
 
 #endif

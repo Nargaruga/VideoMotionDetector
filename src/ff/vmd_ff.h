@@ -6,8 +6,6 @@
 #include <ff/ff.hpp>
 #include <ff/farm.hpp>
 #include <ff/node.hpp>
-#include <future>
-#include <opencv2/videoio.hpp>
 
 /*
  * Class providing a FastFlow-based farm implementation of a
@@ -54,6 +52,7 @@ private:
      */
     class Emitter : public ff::ff_node_t<bool, VMDFrame> {
     public:
+		// Construct the emitter, opening the stream.
         Emitter(std::string videoPath) : cap(videoPath) {}
 
     private:
@@ -109,7 +108,6 @@ private:
 					return EOS;
 				else
                 	return GO_ON;
-
             }
         }
 
