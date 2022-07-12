@@ -6,7 +6,11 @@
 
 std::string usageString(
     "Usage: ./test VIDEO_PATH -m MODE -t TRIES -w WORKERS -b\n\
-		At least VIDEO_PATH must be specified.");
+	At least VIDEO_PATH must be specified.\n\
+	MODE can either be 0 (sequential), 1 (C++ threads) or 2 (FastFlow).\n\
+	TRIES is the number of test runs to execute. Unless the -b flag is in place, this has no effect.\n\
+	WORKERS is the desired parallelism degree.\n\
+	Finally, the -b flag enables benchmarking: see the benchmark folder for the results.");
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
