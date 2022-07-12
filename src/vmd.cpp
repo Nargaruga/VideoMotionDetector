@@ -54,7 +54,6 @@ void VMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath
         cv::VideoCapture cap(videoPath);
         VMDFrame background;
         VMDFrame frame;
-        cv::Mat frameContents;
 
         int movementFrames = 0;
         int totalFrames = 0;
@@ -68,6 +67,7 @@ void VMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath
         auto start = std::chrono::steady_clock::now();
         // Read video frames until EOF
         while(true) {
+        	cv::Mat frameContents;
             cap >> frameContents;
             if(frameContents.empty())
                 break;
@@ -79,10 +79,10 @@ void VMD::benchmarkRun(std::string videoPath, int tries, std::string outFilePath
             auto grayEnd = std::chrono::steady_clock::now();
             grayElapsed += std::chrono::duration_cast<std::chrono::microseconds> (grayEnd - grayStart).count();
 
-            auto smoothStart =  std::chrono::steady_clock::now();
+            auto blurStart =  std::chrono::steady_clock::now();
             frame.blur();
-            auto smoothEnd = std::chrono::steady_clock::now();
-            blurElapsed += std::chrono::duration_cast<std::chrono::microseconds> (smoothEnd - smoothStart).count();
+            auto blurEnd = std::chrono::steady_clock::now();
+            blurElapsed += std::chrono::duration_cast<std::chrono::microseconds> (blurEnd - blurStart).count();
 
             if(background.isEmpty()) {
                 background.setContents(frame.getContents());

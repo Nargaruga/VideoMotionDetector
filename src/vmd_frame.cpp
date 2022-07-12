@@ -5,11 +5,8 @@ void VMDFrame::toGrayScale() {
     cv::Mat grey(m_contents.rows, m_contents.cols, CV_8UC1);
 
     for(int r = 0; r < m_contents.rows; r++) {
-		const cv::Vec3b* rowA = m_contents.ptr<cv::Vec3b>(r);
-		uchar* rowB = grey.ptr<uchar>(r);
-
         for(int c = 0; c < m_contents.cols; c++) {
-            cv::Vec3b intensity = rowA[c];
+            cv::Vec3b intensity = m_contents.at<cv::Vec3b>(r, c);
 
             uchar red = intensity.val[2];
             uchar green	= intensity.val[1];
@@ -17,7 +14,7 @@ void VMDFrame::toGrayScale() {
 
             // Compte the pixel's intensity
             uchar value = std::floor((red + green + blue) / 3.0);
-            rowB[c] = value;
+            grey.at<uchar>(r, c) = value;
         }
     }
 

@@ -29,7 +29,7 @@ public:
 	/*
 	 * Run the video motion detection algorithm on the video
 	 * located at the specified path a number of times equal to
-	 * 'tries'. Time measurements are outputted to /benchmark/benchmark.cvs.
+	 * 'tries'. Time measurements are outputted to outfilepath.
 	 */
     virtual void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 };

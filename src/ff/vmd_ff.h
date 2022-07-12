@@ -6,9 +6,7 @@
 #include <ff/ff.hpp>
 #include <ff/farm.hpp>
 #include <ff/node.hpp>
-#include <string>
 #include <future>
-#include <memory>
 #include <opencv2/videoio.hpp>
 
 /*
@@ -18,7 +16,7 @@
 class FastFlowVMD : public VMD {
 public:
     /*
-     *	POD to pass frames to workers.
+     *	POD to wrap a frame and the background to compare it to.
      */
     struct ToCompare {
         VMDFrame frame;
@@ -41,7 +39,7 @@ public:
     /*
      * Run the video motion detection algorithm on the video
      * located at the specified path a number of times equal to
-     * 'tries'. Time measurements are outputted to /benchmark/benchmark.cvs.
+     * 'tries'. Time measurements are outputted to `outFilePath`.
      */
     void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 
@@ -51,42 +49,75 @@ private:
 
     /*
      *	Emitter class responsible for reading frames and
-     *	passing them to workers.
+     *	passing them to workers, as well as getting back
+	 *	results from workers and counting movement frames.
      */
-    class Emitter : public ff::ff_node_t<VMDFrame> {
+    class Emitter : public ff::ff_node_t<bool, VMDFrame> {
     public:
         Emitter(std::string videoPath) : cap(videoPath) {}
 
     private:
-        cv::VideoCapture cap;	// Video stream source
-        VMDFrame background;	// Background to compare frames against
+        cv::VideoCapture cap;		// Video stream source
+        VMDFrame background;		// Background to compare frames against
+        int movementFrames = 0;		// Number of frames in which movement was detected
+        int totalFrames = 0;		// Total number of frame processed
+        int resultsReceived = 0;	// Number of results received by the emitter
 
         /*
          *	Reads frames and sends them out to workers.
          */
-        VMDFrame* svc(VMDFrame*) {
+        VMDFrame* svc(bool* movement) {
+            if(movement == nullptr) {
+				// First run, we distribute tasks among workers
+                while(true) {
+                    cv::Mat frameContents;
+                    cap >> frameContents;
+                    if(frameContents.empty())
+                        break;
 
-            while(true) {
-                cv::Mat frameContents;
-                cap >> frameContents;
-                if(frameContents.empty())
-                    break;
+                    totalFrames++;
 
-                if(background.isEmpty()) {
-                    // Before processing any other frame, the background must be prepared
-                    background.setContents(frameContents); 
-                    background.toGrayScale();
-                    background.blur();
-                } else {
-                	VMDFrame frame;
-                	frame.setContents(frameContents);
-                    ff_send_out(new ToCompare(frame, background));
+                    if(background.isEmpty()) {
+                        // Before processing any other frame, the background must be prepared
+                        background.setContents(frameContents);
+                        background.toGrayScale();
+                        background.blur();
+                    } else {
+                        VMDFrame frame;
+                        frame.setContents(frameContents);
+                        ff_send_out(new ToCompare(frame, background));
+                    }
                 }
+
+                cap.release();
+                return GO_ON;
+            } else {
+				// Second run, we process the workers' results
+                bool done = false;
+                resultsReceived++;
+
+				// -1 due to not counting the background
+                if(resultsReceived == totalFrames - 1)
+                    done = true;
+
+                if(*movement)
+                    movementFrames++;
+
+                delete movement;
+
+				if(done)
+					return EOS;
+				else
+                	return GO_ON;
+
             }
+        }
 
-            cap.release();
-
-            return EOS;
+        /*
+         * Prints the results.
+         */
+        void svc_end() {
+            std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
         }
     };
 
@@ -116,39 +147,6 @@ private:
             return new bool(res);
         }
     };
-
-    /*
-     * Class responsible for collecting results and counting frames.
-     */
-    class Collector : public ff::ff_node_t<bool, void> {
-        int movementFrames = 0;
-        int totalFrames = 0;
-
-        /*
-         * Counts the number of frames where movement was detected.
-         */
-        void* svc(bool* movementDetectedPtr) {
-            if(movementDetectedPtr == nullptr)
-                return EOS;
-
-            totalFrames++;
-            if(*movementDetectedPtr) {
-                movementFrames++;
-            }
-
-            delete movementDetectedPtr;
-
-            return ff::FF_GO_ON;
-        }
-
-        /*
-         * Prints the results.
-         */
-        void svc_end() {
-            std::cout << "Movement was detected in " << movementFrames << " out of " << totalFrames << " frames." << std::endl;
-        }
-    };
-
 };
 
 #endif
