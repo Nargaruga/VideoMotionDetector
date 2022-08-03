@@ -38,7 +38,6 @@ void ThreadedVMD::run(std::string videoPath) {
                                                 background));
             futures.push_back(task.get_future());
             pool.insertTask(std::move(task));
-
         }
 
 		totalFrames++;

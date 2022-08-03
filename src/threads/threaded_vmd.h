@@ -38,7 +38,7 @@ public:
     void benchmarkRun(std::string videoPath, int tries, std::string outFilePath);
 	
 private:
-	int m_nw;								// Number of workers in the thread pool
+	int m_nw;	// Number of workers in the thread pool
 
 	/*
 	 *	Completely processes `frame`.	
